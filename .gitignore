@@ -1,0 +1,5 @@
+*.pdb
+*.obj
+*.pch
+*.exe
+*.cso
