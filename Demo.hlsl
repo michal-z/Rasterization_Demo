@@ -26,9 +26,9 @@ struct VERTEX_OUTPUT
 [RootSignature(K_RSI_0)]
 VERTEX_OUTPUT VS0_Main(uint vertex_id : SV_VertexID)
 {
-    float2 positions[4] = { float2(-1.0f, -1.0f), float2(-1.0f, 1.0f), float2(1.0f, -1.0f), float2(1.0f, 1.0f) };
+    float2 positions[4] = { float2(-1.0f, -1.0f), float2(-0.8f, 1.0f), float2(1.0f, -1.0f), float2(0.8f, 0.9f) };
     VERTEX_OUTPUT output;
-    output.normalized_coords = 0.7f * positions[vertex_id];
+    output.normalized_coords = 0.9f * positions[vertex_id];
     output.position = float4(output.normalized_coords, 0.0f, 1.0f);
     return output;
 }
@@ -78,4 +78,46 @@ float4 PS1_Main(float4 position : SV_Position) : SV_Target0
 }
 
 #endif // #if PS_1
+//-------------------------------------------------------------------------------------------------
+#if VS_2 || PS_2
+
+#define K_RSI_2 "RootFlags(0), " \
+    "DescriptorTable(SRV(t0), visibility = SHADER_VISIBILITY_PIXEL), " \
+    "StaticSampler(s0, filter = FILTER_MIN_MAG_MIP_POINT, visibility = SHADER_VISIBILITY_PIXEL)"
+
+struct VERTEX_OUTPUT
+{
+    float4 position : SV_Position;
+    float2 texcoord : TEXCOORD;
+};
+
+#endif
+//-------------------------------------------------------------------------------------------------
+#if VS_2
+
+[RootSignature(K_RSI_2)]
+VERTEX_OUTPUT VS2_Main(uint vertex_id : SV_VertexID)
+{
+    float2 positions[3] = { float2(-1.0f, -1.0f), float2(-1.0f, 3.0f), float2(3.0f, -1.0f) };
+    float2 texcoords[3] = { float2(0.0f, 2.0f), float2(0.0f, 0.0f), float2(2.0f, 2.0f) };
+    VERTEX_OUTPUT output;
+    output.position = float4(positions[vertex_id], 0.0f, 1.0f);
+    output.texcoord = texcoords[vertex_id];
+    return output;
+}
+
+#endif
+//-------------------------------------------------------------------------------------------------
+#if PS_2
+
+Texture2D srv_t0 : register(t0);
+SamplerState sam_s0 : register(s0);
+
+[RootSignature(K_RSI_2)]
+float4 PS2_Main(VERTEX_OUTPUT input) : SV_Target0
+{
+    return srv_t0.Sample(sam_s0, input.texcoord);
+}
+
+#endif
 //-------------------------------------------------------------------------------------------------
