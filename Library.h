@@ -93,7 +93,7 @@ inline void Get_Depth_Stencil_Buffer(GRAPHICS_CONTEXT& gfx, ID3D12Resource*& out
     out_handle = gfx.ds_heap.cpu_start;
 }
 
-inline void Bind_Descriptor_Heap(const GRAPHICS_CONTEXT& gfx)
+inline void Bind_GPU_Descriptor_Heap(const GRAPHICS_CONTEXT& gfx)
 {
     gfx.cmdlist->SetDescriptorHeaps(1, &gfx.gpu_descriptor_heaps[gfx.frame_index].heap);
 }

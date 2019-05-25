@@ -21,7 +21,7 @@ static void Demo_Update(DEMO_ROOT& root)
 
     ID3D12GraphicsCommandList2* cmdlist = Get_And_Reset_Command_List(gfx);
 
-    Bind_Descriptor_Heap(gfx);
+    Bind_GPU_Descriptor_Heap(gfx);
 
     cmdlist->RSSetViewports(1, &D3D12_VIEWPORT{ 0.0f, 0.0f, (f32)gfx.resolution[0], (f32)gfx.resolution[1], 0.0f, 1.0f });
     cmdlist->RSSetScissorRects(1, &D3D12_RECT{ 0, 0, (LONG)gfx.resolution[0], (LONG)gfx.resolution[1] });
