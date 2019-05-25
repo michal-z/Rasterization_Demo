@@ -4,29 +4,31 @@
 #define K_DEMO_NAME "Rasterization"
 #define K_NUM_GRAPHICS_PIPELINES 2
 
-static GRAPHICS_CONTEXT g_gfx;
-static ID3D12Resource* g_fragments_buffer;
-static D3D12_CPU_DESCRIPTOR_HANDLE g_fragments_uav;
-static D3D12_CPU_DESCRIPTOR_HANDLE g_fragments_srv;
-static ID3D12PipelineState* g_pipelines[K_NUM_GRAPHICS_PIPELINES];
-static ID3D12RootSignature* g_root_signatures[K_NUM_GRAPHICS_PIPELINES];
-static u32 g_fragment_counter;
-
-static void Demo_Update()
+struct DEMO_ROOT
 {
-    ID3D12GraphicsCommandList2* cmdlist = g_gfx.cmdlist;
+    GRAPHICS_CONTEXT gfx;
+    ID3D12Resource* fragments_buffer;
+    D3D12_CPU_DESCRIPTOR_HANDLE fragments_uav;
+    D3D12_CPU_DESCRIPTOR_HANDLE fragments_srv;
+    ID3D12PipelineState* pipelines[K_NUM_GRAPHICS_PIPELINES];
+    ID3D12RootSignature* root_signatures[K_NUM_GRAPHICS_PIPELINES];
+    u32 fragment_counter;
+};
 
-    g_gfx.cmdalloc[g_gfx.frame_index]->Reset();
-    cmdlist->Reset(g_gfx.cmdalloc[g_gfx.frame_index], nullptr);
+static void Demo_Update(DEMO_ROOT& root)
+{
+    GRAPHICS_CONTEXT& gfx = root.gfx;
 
-    Bind_Descriptor_Heap(g_gfx);
+    ID3D12GraphicsCommandList2* cmdlist = Get_And_Reset_Command_List(gfx);
 
-    cmdlist->RSSetViewports(1, &D3D12_VIEWPORT{ 0.0f, 0.0f, (f32)g_gfx.resolution[0], (f32)g_gfx.resolution[1], 0.0f, 1.0f });
-    cmdlist->RSSetScissorRects(1, &D3D12_RECT{ 0, 0, (LONG)g_gfx.resolution[0], (LONG)g_gfx.resolution[1] });
+    Bind_Descriptor_Heap(gfx);
+
+    cmdlist->RSSetViewports(1, &D3D12_VIEWPORT{ 0.0f, 0.0f, (f32)gfx.resolution[0], (f32)gfx.resolution[1], 0.0f, 1.0f });
+    cmdlist->RSSetScissorRects(1, &D3D12_RECT{ 0, 0, (LONG)gfx.resolution[0], (LONG)gfx.resolution[1] });
 
     ID3D12Resource* back_buffer;
     D3D12_CPU_DESCRIPTOR_HANDLE back_buffer_descriptor;
-    Get_Back_Buffer(g_gfx, back_buffer, back_buffer_descriptor);
+    Get_Back_Buffer(gfx, back_buffer, back_buffer_descriptor);
 
     cmdlist->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(back_buffer, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
@@ -35,54 +37,56 @@ static void Demo_Update()
     cmdlist->ClearRenderTargetView(back_buffer_descriptor, XMVECTORF32{ 0.0f, 0.2f, 0.4f, 1.0f }, 0, nullptr);
 
 
-    if (g_fragment_counter < 128)
+    if (root.fragment_counter < 128)
     {
         // clear atomic counter in the fragments buffer
-        cmdlist->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(g_fragments_buffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_DEST));
+        cmdlist->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(root.fragments_buffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_DEST));
 
-        D3D12_WRITEBUFFERIMMEDIATE_PARAMETER param = { g_fragments_buffer->GetGPUVirtualAddress(), 0 };
+        D3D12_WRITEBUFFERIMMEDIATE_PARAMETER param = { root.fragments_buffer->GetGPUVirtualAddress(), 0 };
         cmdlist->WriteBufferImmediate(1, &param, nullptr);
 
-        cmdlist->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(g_fragments_buffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
+        cmdlist->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(root.fragments_buffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
 
 
         cmdlist->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-        cmdlist->SetPipelineState(g_pipelines[0]);
-        cmdlist->SetGraphicsRootSignature(g_root_signatures[0]);
+        cmdlist->SetPipelineState(root.pipelines[0]);
+        cmdlist->SetGraphicsRootSignature(root.root_signatures[0]);
 
         // bind fragments buffer uav
-        cmdlist->SetGraphicsRootDescriptorTable(0, Copy_Descriptors_To_GPU(g_gfx, 1, g_fragments_uav));
+        cmdlist->SetGraphicsRootDescriptorTable(0, Copy_Descriptors_To_GPU(gfx, 1, root.fragments_uav));
 
         cmdlist->DrawInstanced(4, 1, 0, 0);
     }
 
 
-    cmdlist->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(g_fragments_buffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
+    cmdlist->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(root.fragments_buffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
 
     cmdlist->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
-    cmdlist->SetPipelineState(g_pipelines[1]);
-    cmdlist->SetGraphicsRootSignature(g_root_signatures[1]);
+    cmdlist->SetPipelineState(root.pipelines[1]);
+    cmdlist->SetGraphicsRootSignature(root.root_signatures[1]);
 
     // bind fragments buffer srv
-    cmdlist->SetGraphicsRootDescriptorTable(0, Copy_Descriptors_To_GPU(g_gfx, 1, g_fragments_srv));
+    cmdlist->SetGraphicsRootDescriptorTable(0, Copy_Descriptors_To_GPU(gfx, 1, root.fragments_srv));
 
-    cmdlist->DrawInstanced(g_fragment_counter += 32, 1, 0, 0);
-    if (g_fragment_counter >= g_gfx.resolution[0] * g_gfx.resolution[1])
+    cmdlist->DrawInstanced(root.fragment_counter += 32, 1, 0, 0);
+    if (root.fragment_counter >= gfx.resolution[0] * gfx.resolution[1])
     {
-        g_fragment_counter = 0;
+        root.fragment_counter = 0;
     }
 
-    cmdlist->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(g_fragments_buffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
+    cmdlist->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(root.fragments_buffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
 
     cmdlist->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(back_buffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 
     cmdlist->Close();
 
-    g_gfx.cmdqueue->ExecuteCommandLists(1, (ID3D12CommandList**)&cmdlist);
+    gfx.cmdqueue->ExecuteCommandLists(1, (ID3D12CommandList**)&cmdlist);
 }
 
-static void Demo_Init()
+static void Demo_Init(DEMO_ROOT& root)
 {
+    GRAPHICS_CONTEXT& gfx = root.gfx;
+
     /* VS_0, PS_0 */
     {
         std::vector<u8> vs_code = Load_File("Data/Shaders/0.vs.cso");
@@ -100,8 +104,8 @@ static void Demo_Init()
         pso_desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
         pso_desc.SampleDesc.Count = 1;
 
-        VHR(g_gfx.device->CreateGraphicsPipelineState(&pso_desc, IID_PPV_ARGS(&g_pipelines[0])));
-        VHR(g_gfx.device->CreateRootSignature(0, vs_code.data(), vs_code.size(), IID_PPV_ARGS(&g_root_signatures[0])));
+        VHR(gfx.device->CreateGraphicsPipelineState(&pso_desc, IID_PPV_ARGS(&root.pipelines[0])));
+        VHR(gfx.device->CreateRootSignature(0, vs_code.data(), vs_code.size(), IID_PPV_ARGS(&root.root_signatures[0])));
     }
     /* VS_1, PS_1 */
     {
@@ -120,41 +124,43 @@ static void Demo_Init()
         pso_desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
         pso_desc.SampleDesc.Count = 1;
 
-        VHR(g_gfx.device->CreateGraphicsPipelineState(&pso_desc, IID_PPV_ARGS(&g_pipelines[1])));
-        VHR(g_gfx.device->CreateRootSignature(0, vs_code.data(), vs_code.size(), IID_PPV_ARGS(&g_root_signatures[1])));
+        VHR(gfx.device->CreateGraphicsPipelineState(&pso_desc, IID_PPV_ARGS(&root.pipelines[1])));
+        VHR(gfx.device->CreateRootSignature(0, vs_code.data(), vs_code.size(), IID_PPV_ARGS(&root.root_signatures[1])));
     }
     /* buffer that stores window-space position of each fragment */
     {
-        auto buffer_desc = CD3DX12_RESOURCE_DESC::Buffer((g_gfx.resolution[0] * g_gfx.resolution[1] + 1) * sizeof(XMFLOAT2));
+        auto buffer_desc = CD3DX12_RESOURCE_DESC::Buffer((gfx.resolution[0] * gfx.resolution[1] + 1) * sizeof(XMFLOAT2));
         buffer_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-        VHR(g_gfx.device->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_ALLOW_SHADER_ATOMICS, &buffer_desc, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr, IID_PPV_ARGS(&g_fragments_buffer)));
+        VHR(gfx.device->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_ALLOW_SHADER_ATOMICS, &buffer_desc, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr, IID_PPV_ARGS(&root.fragments_buffer)));
 
-        Allocate_Descriptors(g_gfx, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, g_fragments_srv);
-        Allocate_Descriptors(g_gfx, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, g_fragments_uav);
+        Allocate_Descriptors(gfx, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, root.fragments_srv);
+        Allocate_Descriptors(gfx, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, root.fragments_uav);
 
         D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
         uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
         uav_desc.Buffer.FirstElement = 1;
-        uav_desc.Buffer.NumElements = g_gfx.resolution[0] * g_gfx.resolution[1];
+        uav_desc.Buffer.NumElements = gfx.resolution[0] * gfx.resolution[1];
         uav_desc.Buffer.StructureByteStride = sizeof(XMFLOAT2);
         uav_desc.Buffer.CounterOffsetInBytes = 0;
-        g_gfx.device->CreateUnorderedAccessView(g_fragments_buffer, g_fragments_buffer, &uav_desc, g_fragments_uav);
+        gfx.device->CreateUnorderedAccessView(root.fragments_buffer, root.fragments_buffer, &uav_desc, root.fragments_uav);
 
         D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
         srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
         srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
         srv_desc.Buffer.FirstElement = 1;
-        srv_desc.Buffer.NumElements = g_gfx.resolution[0] * g_gfx.resolution[1];
+        srv_desc.Buffer.NumElements = gfx.resolution[0] * gfx.resolution[1];
         srv_desc.Buffer.StructureByteStride = sizeof(XMFLOAT2);
-        g_gfx.device->CreateShaderResourceView(g_fragments_buffer, &srv_desc, g_fragments_srv);
+        gfx.device->CreateShaderResourceView(root.fragments_buffer, &srv_desc, root.fragments_srv);
     }
 }
 
 static i32 Demo_Run()
 {
     HWND window = Create_Window(K_DEMO_NAME, 800, 800);
-    Init_Graphics_Context(window, g_gfx);
-    Demo_Init();
+
+    DEMO_ROOT root = {};
+    Init_Graphics_Context(window, root.gfx);
+    Demo_Init(root);
 
     for (;;)
     {
@@ -172,8 +178,8 @@ static i32 Demo_Run()
             f64 time;
             f32 delta_time;
             Update_Frame_Stats(window, K_DEMO_NAME, time, delta_time);
-            Demo_Update();
-            Present_Frame(g_gfx, 1);
+            Demo_Update(root);
+            Present_Frame(root.gfx, 1);
         }
     }
     return 0;

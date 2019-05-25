@@ -43,6 +43,13 @@ void Update_Frame_Stats(HWND window, const char* name, f64& out_time, f32& out_d
 f64 Get_Time();
 HWND Create_Window(const char* name, u32 width, u32 height);
 
+inline ID3D12GraphicsCommandList2* Get_And_Reset_Command_List(GRAPHICS_CONTEXT& gfx)
+{
+    gfx.cmdalloc[gfx.frame_index]->Reset();
+    gfx.cmdlist->Reset(gfx.cmdalloc[gfx.frame_index], nullptr);
+    return gfx.cmdlist;
+}
+
 inline void Allocate_Descriptors(GRAPHICS_CONTEXT& gfx, D3D12_DESCRIPTOR_HEAP_TYPE type, u32 count, D3D12_CPU_DESCRIPTOR_HANDLE& out_handle)
 {
     u32 descriptor_size;
