@@ -1,9 +1,9 @@
 #include "External.h"
 #include "Library.h"
 
-static void Init_Descriptor_Heaps(GRAPHICS_CONTEXT& gfx);
+static void Init_Descriptor_Heaps(GRAPHICS_CONTEXT_REF gfx);
 
-void Init_Graphics_Context(HWND window, GRAPHICS_CONTEXT& gfx)
+void Init_Graphics_Context(HWND window, GRAPHICS_CONTEXT_REF gfx)
 {
     IDXGIFactory4* factory;
 #ifdef _DEBUG
@@ -106,7 +106,7 @@ void Init_Graphics_Context(HWND window, GRAPHICS_CONTEXT& gfx)
     gfx.frame_fence_event = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
 }
 
-void Shutdown_Graphics_Context(GRAPHICS_CONTEXT& gfx)
+void Shutdown_Graphics_Context(GRAPHICS_CONTEXT_REF gfx)
 {
     // @Incomplete: Release all resources.
     SAFE_RELEASE(gfx.cmdlist);
@@ -125,7 +125,7 @@ void Shutdown_Graphics_Context(GRAPHICS_CONTEXT& gfx)
     SAFE_RELEASE(gfx.device);
 }
 
-void Present_Frame(GRAPHICS_CONTEXT& gfx, u32 swap_interval)
+void Present_Frame(GRAPHICS_CONTEXT_REF gfx, u32 swap_interval)
 {
     gfx.swapchain->Present(swap_interval, 0);
     gfx.cmdqueue->Signal(gfx.frame_fence, ++gfx.frame_count);
@@ -143,28 +143,28 @@ void Present_Frame(GRAPHICS_CONTEXT& gfx, u32 swap_interval)
     gfx.gpu_descriptor_heaps[gfx.frame_index].size = 0;
 }
 
-void Wait_For_GPU(GRAPHICS_CONTEXT& gfx)
+void Wait_For_GPU(GRAPHICS_CONTEXT_REF gfx)
 {
     gfx.cmdqueue->Signal(gfx.frame_fence, ++gfx.frame_count);
     gfx.frame_fence->SetEventOnCompletion(gfx.frame_count, gfx.frame_fence_event);
     WaitForSingleObject(gfx.frame_fence_event, INFINITE);
 }
 
-DESCRIPTOR_HEAP& Get_Descriptor_Heap(GRAPHICS_CONTEXT& gfx, D3D12_DESCRIPTOR_HEAP_TYPE type, D3D12_DESCRIPTOR_HEAP_FLAGS flags, u32& out_descriptor_size)
+DESCRIPTOR_HEAP_REF Get_Descriptor_Heap(GRAPHICS_CONTEXT_REF gfx, D3D12_DESCRIPTOR_HEAP_TYPE type, D3D12_DESCRIPTOR_HEAP_FLAGS flags, u32& descriptor_size)
 {
     if (type == D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
     {
-        out_descriptor_size = gfx.descriptor_size_rtv;
+        descriptor_size = gfx.descriptor_size_rtv;
         return gfx.rt_heap;
     }
     else if (type == D3D12_DESCRIPTOR_HEAP_TYPE_DSV)
     {
-        out_descriptor_size = gfx.descriptor_size_rtv;
+        descriptor_size = gfx.descriptor_size_rtv;
         return gfx.ds_heap;
     }
     else if (type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
     {
-        out_descriptor_size = gfx.descriptor_size;
+        descriptor_size = gfx.descriptor_size;
         if (flags == D3D12_DESCRIPTOR_HEAP_FLAG_NONE)
         {
             return gfx.cpu_descriptor_heap;
@@ -175,11 +175,11 @@ DESCRIPTOR_HEAP& Get_Descriptor_Heap(GRAPHICS_CONTEXT& gfx, D3D12_DESCRIPTOR_HEA
         }
     }
     assert(0);
-    out_descriptor_size = 0;
+    descriptor_size = 0;
     return gfx.cpu_descriptor_heap;
 }
 
-static void Init_Descriptor_Heaps(GRAPHICS_CONTEXT& gfx)
+static void Init_Descriptor_Heaps(GRAPHICS_CONTEXT_REF gfx)
 {
     // render target descriptor heap (RTV)
     {
@@ -246,7 +246,7 @@ std::vector<u8> Load_File(const char* filename)
     return content;
 }
 
-void Update_Frame_Stats(HWND window, const char* name, f64& out_time, f32& out_delta_time)
+void Update_Frame_Stats(HWND window, const char* name, f64& time, f32& delta_time)
 {
     static f64 previous_time = -1.0;
     static f64 header_refresh_time = 0.0;
@@ -258,18 +258,18 @@ void Update_Frame_Stats(HWND window, const char* name, f64& out_time, f32& out_d
         header_refresh_time = previous_time;
     }
 
-    out_time = Get_Time();
-    out_delta_time = (f32)(out_time - previous_time);
-    previous_time = out_time;
+    time = Get_Time();
+    delta_time = (f32)(time - previous_time);
+    previous_time = time;
 
-    if ((out_time - header_refresh_time) >= 1.0)
+    if ((time - header_refresh_time) >= 1.0)
     {
-        const f64 fps = frame_count / (out_time - header_refresh_time);
+        const f64 fps = frame_count / (time - header_refresh_time);
         const f64 ms = (1.0 / fps) * 1000.0;
         char header[256];
         snprintf(header, sizeof(header), "[%.1f fps  %.3f ms] %s", fps, ms, name);
         SetWindowText(window, header);
-        header_refresh_time = out_time;
+        header_refresh_time = time;
         frame_count = 0;
     }
     frame_count++;

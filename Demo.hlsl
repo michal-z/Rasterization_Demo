@@ -24,11 +24,14 @@ struct VERTEX_OUTPUT
 #if VS_0
 
 [RootSignature(K_RSI_0)]
-VERTEX_OUTPUT VS0_Main(uint vertex_id : SV_VertexID)
+VERTEX_OUTPUT VS0_Main(uint vertex_id : SV_VertexID, uint instance_id : SV_InstanceID)
 {
-    float2 positions[4] = { float2(-1.0f, -1.0f), float2(-0.8f, 1.0f), float2(1.0f, -1.0f), float2(0.8f, 0.9f) };
+    float2 positions[6] = {
+        float2(0.1f, -0.9f), float2(0.2f, 0.9f), float2(1.0f, -1.0f),
+        float2(-1.0f, -1.0f), float2(-0.8f, 1.0f), float2(0.0f, -1.0f),
+    };
     VERTEX_OUTPUT output;
-    output.normalized_coords = 0.9f * positions[vertex_id];
+    output.normalized_coords = 0.9f * positions[vertex_id + instance_id * 3];
     output.position = float4(output.normalized_coords, 0.0f, 1.0f);
     return output;
 }

@@ -5,7 +5,7 @@
 #define K_NUM_GRAPHICS_PIPELINES 3
 #define K_FRAGMENTS_RT_RESOLUTION 512
 
-struct FRAGMENTS
+typedef struct FRAGMENTS
 {
     ID3D12Resource* buffer;
     D3D12_CPU_DESCRIPTOR_HANDLE buffer_uav;
@@ -14,20 +14,20 @@ struct FRAGMENTS
     D3D12_CPU_DESCRIPTOR_HANDLE target_rtv;
     D3D12_CPU_DESCRIPTOR_HANDLE target_srv;
     f32 counter;
-};
+} &FRAGMENTS_REF;
 
-struct DEMO_ROOT
+typedef struct DEMO_ROOT
 {
     GRAPHICS_CONTEXT gfx;
     FRAGMENTS frags;
     ID3D12PipelineState* pipelines[K_NUM_GRAPHICS_PIPELINES];
     ID3D12RootSignature* root_signatures[K_NUM_GRAPHICS_PIPELINES];
-};
+} &DEMO_ROOT_REF;
 
-static void Demo_Update(DEMO_ROOT& root)
+static void Demo_Update(DEMO_ROOT_REF root)
 {
-    GRAPHICS_CONTEXT& gfx = root.gfx;
-    FRAGMENTS& frags = root.frags;
+    GRAPHICS_CONTEXT_REF gfx = root.gfx;
+    FRAGMENTS_REF frags = root.frags;
 
     ID3D12GraphicsCommandList2* cmdlist = Get_And_Reset_Command_List(gfx);
 
@@ -51,12 +51,12 @@ static void Demo_Update(DEMO_ROOT& root)
         cmdlist->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(frags.buffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
 
 
-        cmdlist->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+        cmdlist->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         cmdlist->SetPipelineState(root.pipelines[0]);
         cmdlist->SetGraphicsRootSignature(root.root_signatures[0]);
         cmdlist->SetGraphicsRootDescriptorTable(0, Copy_Descriptors_To_GPU(gfx, 1, frags.buffer_uav));
 
-        cmdlist->DrawInstanced(4, 1, 0, 0);
+        cmdlist->DrawInstanced(3, 2, 0, 0);
 
 
         cmdlist->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(frags.buffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
@@ -71,7 +71,7 @@ static void Demo_Update(DEMO_ROOT& root)
     cmdlist->DrawInstanced((u32)frags.counter, 1, 0, 0);
     if (frags.counter >= K_FRAGMENTS_RT_RESOLUTION * K_FRAGMENTS_RT_RESOLUTION)
     {
-        frags.counter = 0;
+        frags.counter = 1.0f;
     }
 
     cmdlist->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(frags.target, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
@@ -109,7 +109,7 @@ static void Demo_Update(DEMO_ROOT& root)
     gfx.cmdqueue->ExecuteCommandLists(1, (ID3D12CommandList**)&cmdlist);
 }
 
-static void Init_Fragment_Resources(FRAGMENTS& frags, GRAPHICS_CONTEXT& gfx)
+static void Init_Fragment_Resources(FRAGMENTS_REF frags, GRAPHICS_CONTEXT_REF gfx)
 {
     frags.counter = 1.0f;
 
@@ -152,9 +152,9 @@ static void Init_Fragment_Resources(FRAGMENTS& frags, GRAPHICS_CONTEXT& gfx)
     }
 }
 
-static void Demo_Init(DEMO_ROOT& root)
+static void Demo_Init(DEMO_ROOT_REF root)
 {
-    GRAPHICS_CONTEXT& gfx = root.gfx;
+    GRAPHICS_CONTEXT_REF gfx = root.gfx;
 
     // VS_0, PS_0
     {
