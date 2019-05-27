@@ -3,7 +3,7 @@
 
 #define K_DEMO_NAME "Rasterization"
 #define K_NUM_GRAPHICS_PIPELINES 3
-#define K_FRAGMENTS_RT_RESOLUTION 512
+#define K_FRAGMENTS_RT_RESOLUTION 1024
 
 typedef struct FRAGMENTS
 {
@@ -22,6 +22,7 @@ typedef struct DEMO_ROOT
     FRAGMENTS frags;
     ID3D12PipelineState* pipelines[K_NUM_GRAPHICS_PIPELINES];
     ID3D12RootSignature* root_signatures[K_NUM_GRAPHICS_PIPELINES];
+    ID3D12Resource* geometry_buffer;
 } &DEMO_ROOT_REF;
 
 static void Demo_Update(DEMO_ROOT_REF root)
@@ -56,7 +57,13 @@ static void Demo_Update(DEMO_ROOT_REF root)
         cmdlist->SetGraphicsRootSignature(root.root_signatures[0]);
         cmdlist->SetGraphicsRootDescriptorTable(0, Copy_Descriptors_To_GPU(gfx, 1, frags.buffer_uav));
 
-        cmdlist->DrawInstanced(3, 2, 0, 0);
+        D3D12_VERTEX_BUFFER_VIEW vb_view = {};
+        vb_view.BufferLocation = root.geometry_buffer->GetGPUVirtualAddress();
+        vb_view.StrideInBytes = sizeof(XMFLOAT2) + sizeof(XMFLOAT3);
+        vb_view.SizeInBytes = 3 * vb_view.StrideInBytes;
+        cmdlist->IASetVertexBuffers(0, 1, &vb_view);
+
+        cmdlist->DrawInstanced(3, 1, 0, 0);
 
 
         cmdlist->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(frags.buffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
@@ -115,7 +122,8 @@ static void Init_Fragment_Resources(FRAGMENTS_REF frags, GRAPHICS_CONTEXT_REF gf
 
     // buffer that stores window-space position of each fragment
     {
-        auto buffer_desc = CD3DX12_RESOURCE_DESC::Buffer((K_FRAGMENTS_RT_RESOLUTION * K_FRAGMENTS_RT_RESOLUTION + 1) * sizeof(XMFLOAT2));
+        const auto fragment_size = sizeof(XMFLOAT2) + sizeof(XMFLOAT3);
+        auto buffer_desc = CD3DX12_RESOURCE_DESC::Buffer((K_FRAGMENTS_RT_RESOLUTION * K_FRAGMENTS_RT_RESOLUTION + 1) * fragment_size);
         buffer_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
         VHR(gfx.device->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_ALLOW_SHADER_ATOMICS, &buffer_desc, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr, IID_PPV_ARGS(&frags.buffer)));
 
@@ -126,7 +134,7 @@ static void Init_Fragment_Resources(FRAGMENTS_REF frags, GRAPHICS_CONTEXT_REF gf
         uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
         uav_desc.Buffer.FirstElement = 1;
         uav_desc.Buffer.NumElements = K_FRAGMENTS_RT_RESOLUTION * K_FRAGMENTS_RT_RESOLUTION;
-        uav_desc.Buffer.StructureByteStride = sizeof(XMFLOAT2);
+        uav_desc.Buffer.StructureByteStride = fragment_size;
         uav_desc.Buffer.CounterOffsetInBytes = 0;
         gfx.device->CreateUnorderedAccessView(frags.buffer, frags.buffer, &uav_desc, frags.buffer_uav);
 
@@ -135,7 +143,7 @@ static void Init_Fragment_Resources(FRAGMENTS_REF frags, GRAPHICS_CONTEXT_REF gf
         srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
         srv_desc.Buffer.FirstElement = 1;
         srv_desc.Buffer.NumElements = K_FRAGMENTS_RT_RESOLUTION * K_FRAGMENTS_RT_RESOLUTION;
-        srv_desc.Buffer.StructureByteStride = sizeof(XMFLOAT2);
+        srv_desc.Buffer.StructureByteStride = fragment_size;
         gfx.device->CreateShaderResourceView(frags.buffer, &srv_desc, frags.buffer_srv);
     }
     // render target for fragments (rtv and srv)
@@ -161,7 +169,14 @@ static void Demo_Init(DEMO_ROOT_REF root)
         std::vector<u8> vs_code = Load_File("Data/Shaders/0.vs.cso");
         std::vector<u8> ps_code = Load_File("Data/Shaders/0.ps.cso");
 
+        D3D12_INPUT_ELEMENT_DESC input_elements[] =
+        {
+            { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+            { "COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 8, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        };
+
         D3D12_GRAPHICS_PIPELINE_STATE_DESC pso_desc = {};
+        pso_desc.InputLayout = { input_elements, (u32)std::size(input_elements) };
         pso_desc.VS = { vs_code.data(), vs_code.size() };
         pso_desc.PS = { ps_code.data(), ps_code.size() };
         pso_desc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
@@ -216,6 +231,18 @@ static void Demo_Init(DEMO_ROOT_REF root)
         VHR(gfx.device->CreateGraphicsPipelineState(&pso_desc, IID_PPV_ARGS(&root.pipelines[2])));
         VHR(gfx.device->CreateRootSignature(0, vs_code.data(), vs_code.size(), IID_PPV_ARGS(&root.root_signatures[2])));
     }
+    // geometry buffer
+    {
+        const auto buffer_desc = CD3DX12_RESOURCE_DESC::Buffer(64 * 1024);
+        VHR(gfx.device->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD), D3D12_HEAP_FLAG_NONE, &buffer_desc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&root.geometry_buffer)));
+
+        f32* ptr;
+        VHR(root.geometry_buffer->Map(0, &CD3DX12_RANGE(0, 0), (void**)&ptr));
+        *ptr++ = -0.8f; *ptr++ = -0.8f; *ptr++ = 1.0f; *ptr++ = 0.0f; *ptr++ = 0.0f;
+        *ptr++ = -0.8f; *ptr++ = 0.8f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
+        *ptr++ = 0.8f; *ptr++ = -0.8f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 1.0f;
+    }
+
     Init_Fragment_Resources(root.frags, gfx);
 }
 

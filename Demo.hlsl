@@ -4,34 +4,39 @@
 struct FRAGMENT
 {
     float2 position;
+    float3 color;
 };
 
 #endif // #if PS_0 || VS_1
-//-------------------------------------------------------------------------------------------------
+//=================================================================================================
 #if VS_0 || PS_0
 
-#define K_RSI_0 "RootFlags(0), " \
+#define K_RSI_0 "RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), " \
     "DescriptorTable(UAV(u0), visibility = SHADER_VISIBILITY_PIXEL)"
 
 struct VERTEX_OUTPUT
 {
     float4 position : SV_Position;
     float2 normalized_coords : NCOORDS;
+    float3 color : COLOR;
 };
 
 #endif // #if VS_0 || PS_0
 //-------------------------------------------------------------------------------------------------
 #if VS_0
 
-[RootSignature(K_RSI_0)]
-VERTEX_OUTPUT VS0_Main(uint vertex_id : SV_VertexID, uint instance_id : SV_InstanceID)
+struct VERTEX_INPUT
 {
-    float2 positions[6] = {
-        float2(0.1f, -0.9f), float2(0.2f, 0.9f), float2(1.0f, -1.0f),
-        float2(-1.0f, -1.0f), float2(-0.8f, 1.0f), float2(0.0f, -1.0f),
-    };
+    float2 position : POSITION;
+    float3 color : COLOR;
+};
+
+[RootSignature(K_RSI_0)]
+VERTEX_OUTPUT VS0_Main(VERTEX_INPUT input)
+{
     VERTEX_OUTPUT output;
-    output.normalized_coords = 0.9f * positions[vertex_id + instance_id * 3];
+    output.normalized_coords = input.position;
+    output.color = input.color;
     output.position = float4(output.normalized_coords, 0.0f, 1.0f);
     return output;
 }
@@ -47,15 +52,22 @@ float4 PS0_Main(VERTEX_OUTPUT input) : SV_Target0
 {
     uint index = uav_fragments.IncrementCounter();
     uav_fragments[index].position = input.normalized_coords;
+    uav_fragments[index].color = input.color;
     return float4(0.0f, 0.5f, 0.0f, 1.0f);
 }
 
 #endif // #if PS_0
-//-------------------------------------------------------------------------------------------------
+//=================================================================================================
 #if VS_1 || PS_1
 
 #define K_RSI_1 "RootFlags(0), " \
     "DescriptorTable(SRV(t0), visibility = SHADER_VISIBILITY_VERTEX)"
+
+struct VERTEX_OUTPUT
+{
+    float4 position : SV_Position;
+    float3 color : COLOR;
+};
 
 #endif // #if VS_1 || PS_1
 //-------------------------------------------------------------------------------------------------
@@ -64,10 +76,13 @@ float4 PS0_Main(VERTEX_OUTPUT input) : SV_Target0
 StructuredBuffer<FRAGMENT> srv_fragments : register(t0);
 
 [RootSignature(K_RSI_1)]
-float4 VS1_Main(uint vertex_id : SV_VertexID) : SV_Position
+VERTEX_OUTPUT VS1_Main(uint vertex_id : SV_VertexID)
 {
     FRAGMENT frag = srv_fragments[vertex_id];
-    return float4(frag.position, 0.0f, 1.0f);
+    VERTEX_OUTPUT output;
+    output.position = float4(frag.position, 0.0f, 1.0f);
+    output.color = frag.color;
+    return output;
 }
 
 #endif // #if VS_1
@@ -75,13 +90,13 @@ float4 VS1_Main(uint vertex_id : SV_VertexID) : SV_Position
 #if PS_1
 
 [RootSignature(K_RSI_1)]
-float4 PS1_Main(float4 position : SV_Position) : SV_Target0
+float4 PS1_Main(VERTEX_OUTPUT input) : SV_Target0
 {
-    return float4(0.6f, 0.5f, 0.0, 1.0);
+    return float4(input.color, 1.0);
 }
 
 #endif // #if PS_1
-//-------------------------------------------------------------------------------------------------
+//=================================================================================================
 #if VS_2 || PS_2
 
 #define K_RSI_2 "RootFlags(0), " \
