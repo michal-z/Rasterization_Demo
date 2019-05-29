@@ -1,17 +1,13 @@
 //-------------------------------------------------------------------------------------------------
 #if PS_0 || VS_1
 
-struct FRAGMENT
-{
-    float2 position;
-    float3 color;
-};
+#include "Common.h"
 
 #endif // #if PS_0 || VS_1
 //=================================================================================================
 #if VS_0 || PS_0
 
-#define K_RSI_0 "RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), " \
+#define RSI_0 "RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), " \
     "DescriptorTable(UAV(u0), visibility = SHADER_VISIBILITY_PIXEL)"
 
 struct VERTEX_OUTPUT
@@ -31,7 +27,7 @@ struct VERTEX_INPUT
     float3 color : COLOR;
 };
 
-[RootSignature(K_RSI_0)]
+[RootSignature(RSI_0)]
 VERTEX_OUTPUT VS0_Main(VERTEX_INPUT input)
 {
     VERTEX_OUTPUT output;
@@ -47,7 +43,7 @@ VERTEX_OUTPUT VS0_Main(VERTEX_INPUT input)
 
 RWStructuredBuffer<FRAGMENT> uav_fragments : register(u0);
 
-[RootSignature(K_RSI_0)]
+[RootSignature(RSI_0)]
 float4 PS0_Main(VERTEX_OUTPUT input) : SV_Target0
 {
     uint index = uav_fragments.IncrementCounter();
@@ -60,7 +56,7 @@ float4 PS0_Main(VERTEX_OUTPUT input) : SV_Target0
 //=================================================================================================
 #if VS_1 || PS_1
 
-#define K_RSI_1 "RootFlags(0), " \
+#define RSI_1 "RootFlags(0), " \
     "DescriptorTable(SRV(t0), visibility = SHADER_VISIBILITY_VERTEX)"
 
 struct VERTEX_OUTPUT
@@ -75,7 +71,7 @@ struct VERTEX_OUTPUT
 
 StructuredBuffer<FRAGMENT> srv_fragments : register(t0);
 
-[RootSignature(K_RSI_1)]
+[RootSignature(RSI_1)]
 VERTEX_OUTPUT VS1_Main(uint vertex_id : SV_VertexID)
 {
     FRAGMENT frag = srv_fragments[vertex_id];
@@ -89,7 +85,7 @@ VERTEX_OUTPUT VS1_Main(uint vertex_id : SV_VertexID)
 //-------------------------------------------------------------------------------------------------
 #if PS_1
 
-[RootSignature(K_RSI_1)]
+[RootSignature(RSI_1)]
 float4 PS1_Main(VERTEX_OUTPUT input) : SV_Target0
 {
     return float4(input.color, 1.0);
@@ -99,7 +95,7 @@ float4 PS1_Main(VERTEX_OUTPUT input) : SV_Target0
 //=================================================================================================
 #if VS_2 || PS_2
 
-#define K_RSI_2 "RootFlags(0), " \
+#define RSI_2 "RootFlags(0), " \
     "DescriptorTable(SRV(t0), visibility = SHADER_VISIBILITY_PIXEL), " \
     "StaticSampler(s0, filter = FILTER_MIN_MAG_MIP_POINT, visibility = SHADER_VISIBILITY_PIXEL)"
 
@@ -113,7 +109,7 @@ struct VERTEX_OUTPUT
 //-------------------------------------------------------------------------------------------------
 #if VS_2
 
-[RootSignature(K_RSI_2)]
+[RootSignature(RSI_2)]
 VERTEX_OUTPUT VS2_Main(uint vertex_id : SV_VertexID)
 {
     float2 positions[3] = { float2(-1.0f, -1.0f), float2(-1.0f, 3.0f), float2(3.0f, -1.0f) };
@@ -131,7 +127,7 @@ VERTEX_OUTPUT VS2_Main(uint vertex_id : SV_VertexID)
 Texture2D srv_t0 : register(t0);
 SamplerState sam_s0 : register(s0);
 
-[RootSignature(K_RSI_2)]
+[RootSignature(RSI_2)]
 float4 PS2_Main(VERTEX_OUTPUT input) : SV_Target0
 {
     return srv_t0.Sample(sam_s0, input.texcoord);

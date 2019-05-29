@@ -1,11 +1,11 @@
 #include "External.h"
 #include "Library.h"
 
-static void Init_Descriptor_Heaps(GRAPHICS_CONTEXT_REF gfx);
+static void Init_Descriptor_Heaps(GRAPHICS_CONTEXT &gfx);
 
-void Init_Graphics_Context(HWND window, GRAPHICS_CONTEXT_REF gfx)
+void Init_Graphics_Context(HWND window, GRAPHICS_CONTEXT &gfx)
 {
-    IDXGIFactory4* factory;
+    IDXGIFactory4 *factory;
 #ifdef _DEBUG
     VHR(CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(&factory)));
 #else
@@ -13,12 +13,12 @@ void Init_Graphics_Context(HWND window, GRAPHICS_CONTEXT_REF gfx)
 #endif
 #ifdef _DEBUG
     {
-        ID3D12Debug* dbg;
+        ID3D12Debug *dbg;
         D3D12GetDebugInterface(IID_PPV_ARGS(&dbg));
         if (dbg)
         {
             dbg->EnableDebugLayer();
-            ID3D12Debug1* dbg1;
+            ID3D12Debug1 *dbg1;
             dbg->QueryInterface(IID_PPV_ARGS(&dbg1));
             if (dbg1)
             {
@@ -50,7 +50,7 @@ void Init_Graphics_Context(HWND window, GRAPHICS_CONTEXT_REF gfx)
     swapchain_desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
     swapchain_desc.Windowed = TRUE;
 
-    IDXGISwapChain* temp_swapchain;
+    IDXGISwapChain *temp_swapchain;
     VHR(factory->CreateSwapChain(gfx.cmdqueue, &swapchain_desc, &temp_swapchain));
     VHR(temp_swapchain->QueryInterface(IID_PPV_ARGS(&gfx.swapchain)));
     SAFE_RELEASE(temp_swapchain);
@@ -106,7 +106,7 @@ void Init_Graphics_Context(HWND window, GRAPHICS_CONTEXT_REF gfx)
     gfx.frame_fence_event = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
 }
 
-void Shutdown_Graphics_Context(GRAPHICS_CONTEXT_REF gfx)
+void Shutdown_Graphics_Context(GRAPHICS_CONTEXT &gfx)
 {
     // @Incomplete: Release all resources.
     SAFE_RELEASE(gfx.cmdlist);
@@ -125,7 +125,7 @@ void Shutdown_Graphics_Context(GRAPHICS_CONTEXT_REF gfx)
     SAFE_RELEASE(gfx.device);
 }
 
-void Present_Frame(GRAPHICS_CONTEXT_REF gfx, u32 swap_interval)
+void Present_Frame(GRAPHICS_CONTEXT &gfx, u32 swap_interval)
 {
     gfx.swapchain->Present(swap_interval, 0);
     gfx.cmdqueue->Signal(gfx.frame_fence, ++gfx.frame_count);
@@ -143,14 +143,14 @@ void Present_Frame(GRAPHICS_CONTEXT_REF gfx, u32 swap_interval)
     gfx.gpu_descriptor_heaps[gfx.frame_index].size = 0;
 }
 
-void Wait_For_GPU(GRAPHICS_CONTEXT_REF gfx)
+void Wait_For_GPU(GRAPHICS_CONTEXT &gfx)
 {
     gfx.cmdqueue->Signal(gfx.frame_fence, ++gfx.frame_count);
     gfx.frame_fence->SetEventOnCompletion(gfx.frame_count, gfx.frame_fence_event);
     WaitForSingleObject(gfx.frame_fence_event, INFINITE);
 }
 
-DESCRIPTOR_HEAP_REF Get_Descriptor_Heap(GRAPHICS_CONTEXT_REF gfx, D3D12_DESCRIPTOR_HEAP_TYPE type, D3D12_DESCRIPTOR_HEAP_FLAGS flags, u32& descriptor_size)
+DESCRIPTOR_HEAP &Get_Descriptor_Heap(GRAPHICS_CONTEXT &gfx, D3D12_DESCRIPTOR_HEAP_TYPE type, D3D12_DESCRIPTOR_HEAP_FLAGS flags, u32 &descriptor_size)
 {
     if (type == D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
     {
@@ -179,7 +179,7 @@ DESCRIPTOR_HEAP_REF Get_Descriptor_Heap(GRAPHICS_CONTEXT_REF gfx, D3D12_DESCRIPT
     return gfx.cpu_descriptor_heap;
 }
 
-static void Init_Descriptor_Heaps(GRAPHICS_CONTEXT_REF gfx)
+static void Init_Descriptor_Heaps(GRAPHICS_CONTEXT &gfx)
 {
     // render target descriptor heap (RTV)
     {
@@ -232,9 +232,9 @@ static void Init_Descriptor_Heaps(GRAPHICS_CONTEXT_REF gfx)
     }
 }
 
-std::vector<u8> Load_File(const char* filename)
+std::vector<u8> Load_File(const char *filename)
 {
-    FILE* file = fopen(filename, "rb");
+    FILE *file = fopen(filename, "rb");
     assert(file);
     fseek(file, 0, SEEK_END);
     long size = ftell(file);
@@ -246,7 +246,7 @@ std::vector<u8> Load_File(const char* filename)
     return content;
 }
 
-void Update_Frame_Stats(HWND window, const char* name, f64& time, f32& delta_time)
+void Update_Frame_Stats(HWND window, const char *name, f64 &time, f32 &delta_time)
 {
     static f64 previous_time = -1.0;
     static f64 header_refresh_time = 0.0;
@@ -307,7 +307,7 @@ static LRESULT CALLBACK Process_Window_Message(HWND window, UINT message, WPARAM
     return DefWindowProc(window, message, wparam, lparam);
 }
 
-HWND Create_Window(const char* name, u32 width, u32 height)
+HWND Create_Window(const char *name, u32 width, u32 height)
 {
     WNDCLASS winclass = {};
     winclass.lpfnWndProc = Process_Window_Message;

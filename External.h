@@ -23,6 +23,9 @@
 
 #define VHR(hr) if (FAILED(hr)) { assert(0); }
 #define SAFE_RELEASE(obj) if ((obj)) { (obj)->Release(); (obj) = nullptr; }
+#define float2 XMFLOAT2
+#define float3 XMFLOAT3
+#define float4 XMFLOAT4
 
 typedef char i8;
 typedef short i16;
