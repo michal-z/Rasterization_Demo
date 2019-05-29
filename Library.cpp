@@ -3,7 +3,8 @@
 
 static void Init_Descriptor_Heaps(GRAPHICS_CONTEXT &gfx);
 
-void Init_Graphics_Context(HWND window, GRAPHICS_CONTEXT &gfx)
+void
+Init_Graphics_Context(HWND window, GRAPHICS_CONTEXT &gfx)
 {
     IDXGIFactory4 *factory;
 #ifdef _DEBUG
@@ -106,7 +107,8 @@ void Init_Graphics_Context(HWND window, GRAPHICS_CONTEXT &gfx)
     gfx.frame_fence_event = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
 }
 
-void Shutdown_Graphics_Context(GRAPHICS_CONTEXT &gfx)
+void
+Shutdown_Graphics_Context(GRAPHICS_CONTEXT &gfx)
 {
     // @Incomplete: Release all resources.
     SAFE_RELEASE(gfx.cmdlist);
@@ -125,7 +127,8 @@ void Shutdown_Graphics_Context(GRAPHICS_CONTEXT &gfx)
     SAFE_RELEASE(gfx.device);
 }
 
-void Present_Frame(GRAPHICS_CONTEXT &gfx, u32 swap_interval)
+void
+Present_Frame(GRAPHICS_CONTEXT &gfx, u32 swap_interval)
 {
     gfx.swapchain->Present(swap_interval, 0);
     gfx.cmdqueue->Signal(gfx.frame_fence, ++gfx.frame_count);
@@ -143,14 +146,16 @@ void Present_Frame(GRAPHICS_CONTEXT &gfx, u32 swap_interval)
     gfx.gpu_descriptor_heaps[gfx.frame_index].size = 0;
 }
 
-void Wait_For_GPU(GRAPHICS_CONTEXT &gfx)
+void
+Wait_For_GPU(GRAPHICS_CONTEXT &gfx)
 {
     gfx.cmdqueue->Signal(gfx.frame_fence, ++gfx.frame_count);
     gfx.frame_fence->SetEventOnCompletion(gfx.frame_count, gfx.frame_fence_event);
     WaitForSingleObject(gfx.frame_fence_event, INFINITE);
 }
 
-DESCRIPTOR_HEAP &Get_Descriptor_Heap(GRAPHICS_CONTEXT &gfx, D3D12_DESCRIPTOR_HEAP_TYPE type, D3D12_DESCRIPTOR_HEAP_FLAGS flags, u32 &descriptor_size)
+DESCRIPTOR_HEAP &
+Get_Descriptor_Heap(GRAPHICS_CONTEXT &gfx, D3D12_DESCRIPTOR_HEAP_TYPE type, D3D12_DESCRIPTOR_HEAP_FLAGS flags, u32 &descriptor_size)
 {
     if (type == D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
     {
@@ -179,7 +184,8 @@ DESCRIPTOR_HEAP &Get_Descriptor_Heap(GRAPHICS_CONTEXT &gfx, D3D12_DESCRIPTOR_HEA
     return gfx.cpu_descriptor_heap;
 }
 
-static void Init_Descriptor_Heaps(GRAPHICS_CONTEXT &gfx)
+static void
+Init_Descriptor_Heaps(GRAPHICS_CONTEXT &gfx)
 {
     // render target descriptor heap (RTV)
     {
@@ -232,21 +238,27 @@ static void Init_Descriptor_Heaps(GRAPHICS_CONTEXT &gfx)
     }
 }
 
-std::vector<u8> Load_File(const char *filename)
+void
+Load_File(const char *filename, u32 &size, u8 *&data)
 {
     FILE *file = fopen(filename, "rb");
     assert(file);
     fseek(file, 0, SEEK_END);
-    long size = ftell(file);
-    assert(size != -1);
-    std::vector<u8> content(size);
+    long ret_size = ftell(file);
+    if (ret_size == -1)
+    {
+        assert(0);
+        return;
+    }
+    size = (u32)ret_size;
+    data = (u8 *)malloc(size);
     fseek(file, 0, SEEK_SET);
-    fread(&content[0], 1, content.size(), file);
+    fread(data, 1, size, file);
     fclose(file);
-    return content;
 }
 
-void Update_Frame_Stats(HWND window, const char *name, f64 &time, f32 &delta_time)
+void
+Update_Frame_Stats(HWND window, const char *name, f64 &time, f32 &delta_time)
 {
     static f64 previous_time = -1.0;
     static f64 header_refresh_time = 0.0;
@@ -275,7 +287,8 @@ void Update_Frame_Stats(HWND window, const char *name, f64 &time, f32 &delta_tim
     frame_count++;
 }
 
-f64 Get_Time()
+f64
+Get_Time()
 {
     static LARGE_INTEGER start_counter;
     static LARGE_INTEGER frequency;
@@ -289,7 +302,8 @@ f64 Get_Time()
     return (counter.QuadPart - start_counter.QuadPart) / (f64)frequency.QuadPart;
 }
 
-static LRESULT CALLBACK Process_Window_Message(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
+static LRESULT CALLBACK
+Process_Window_Message(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
 {
     switch (message)
     {
@@ -307,7 +321,8 @@ static LRESULT CALLBACK Process_Window_Message(HWND window, UINT message, WPARAM
     return DefWindowProc(window, message, wparam, lparam);
 }
 
-HWND Create_Window(const char *name, u32 width, u32 height)
+HWND
+Create_Window(const char *name, u32 width, u32 height)
 {
     WNDCLASS winclass = {};
     winclass.lpfnWndProc = Process_Window_Message;

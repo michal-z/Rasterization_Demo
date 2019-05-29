@@ -28,7 +28,8 @@ struct VERTEX_INPUT
 };
 
 [RootSignature(RSI_0)]
-VERTEX_OUTPUT VS0_Main(VERTEX_INPUT input)
+VERTEX_OUTPUT
+VS0_Main(VERTEX_INPUT input)
 {
     VERTEX_OUTPUT output;
     output.normalized_coords = input.position;
@@ -44,7 +45,8 @@ VERTEX_OUTPUT VS0_Main(VERTEX_INPUT input)
 RWStructuredBuffer<FRAGMENT> uav_fragments : register(u0);
 
 [RootSignature(RSI_0)]
-float4 PS0_Main(VERTEX_OUTPUT input) : SV_Target0
+float4
+PS0_Main(VERTEX_OUTPUT input) : SV_Target0
 {
     uint index = uav_fragments.IncrementCounter();
     uav_fragments[index].position = input.normalized_coords;
@@ -72,7 +74,8 @@ struct VERTEX_OUTPUT
 StructuredBuffer<FRAGMENT> srv_fragments : register(t0);
 
 [RootSignature(RSI_1)]
-VERTEX_OUTPUT VS1_Main(uint vertex_id : SV_VertexID)
+VERTEX_OUTPUT
+VS1_Main(uint vertex_id : SV_VertexID)
 {
     FRAGMENT frag = srv_fragments[vertex_id];
     VERTEX_OUTPUT output;
@@ -86,7 +89,8 @@ VERTEX_OUTPUT VS1_Main(uint vertex_id : SV_VertexID)
 #if PS_1
 
 [RootSignature(RSI_1)]
-float4 PS1_Main(VERTEX_OUTPUT input) : SV_Target0
+float4
+PS1_Main(VERTEX_OUTPUT input) : SV_Target0
 {
     return float4(input.color, 1.0);
 }
@@ -110,7 +114,8 @@ struct VERTEX_OUTPUT
 #if VS_2
 
 [RootSignature(RSI_2)]
-VERTEX_OUTPUT VS2_Main(uint vertex_id : SV_VertexID)
+VERTEX_OUTPUT
+VS2_Main(uint vertex_id : SV_VertexID)
 {
     float2 positions[3] = { float2(-1.0f, -1.0f), float2(-1.0f, 3.0f), float2(3.0f, -1.0f) };
     float2 texcoords[3] = { float2(0.0f, 2.0f), float2(0.0f, 0.0f), float2(2.0f, 2.0f) };
@@ -128,7 +133,8 @@ Texture2D srv_t0 : register(t0);
 SamplerState sam_s0 : register(s0);
 
 [RootSignature(RSI_2)]
-float4 PS2_Main(VERTEX_OUTPUT input) : SV_Target0
+float4
+PS2_Main(VERTEX_OUTPUT input) : SV_Target0
 {
     return srv_t0.Sample(sam_s0, input.texcoord);
 }

@@ -4,6 +4,8 @@
 #include <assert.h>
 #include <stdint.h>
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
@@ -11,12 +13,8 @@
 #include <d3d12.h>
 #include <windows.h>
 
-#include <vector>
-
 #include <DirectXMath.h>
 #include "d3dx12.h"
-#include "stb_image.h"
-#include "stb_perlin.h"
 
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")

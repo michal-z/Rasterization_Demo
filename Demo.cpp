@@ -26,7 +26,8 @@ struct DEMO_ROOT
     ID3D12Resource *geometry_buffer;
 };
 
-static void Demo_Update(DEMO_ROOT &root)
+static void
+Demo_Update(DEMO_ROOT &root)
 {
     GRAPHICS_CONTEXT &gfx = root.gfx;
     FRAGMENTS &frags = root.frags;
@@ -117,7 +118,8 @@ static void Demo_Update(DEMO_ROOT &root)
     gfx.cmdqueue->ExecuteCommandLists(1, (ID3D12CommandList **)&cmdlist);
 }
 
-static void Init_Fragment_Resources(FRAGMENTS &frags, GRAPHICS_CONTEXT &gfx)
+static void
+Init_Fragment_Resources(FRAGMENTS &frags, GRAPHICS_CONTEXT &gfx)
 {
     frags.counter = 0;
 
@@ -159,105 +161,71 @@ static void Init_Fragment_Resources(FRAGMENTS &frags, GRAPHICS_CONTEXT &gfx)
         gfx.device->CreateShaderResourceView(frags.target, nullptr, frags.target_srv);
     }
 }
-#if 0
-static void Init_Pipelines(DEMO_ROOT &root)
-{
-    for (u32 pipe_idx = 0; pipe_idx < NUM_GRAPHICS_PIPELINES; ++pipe_idx)
-    {
-        std::vector<u8> vs_code = Load_File("Data/Shaders/0.vs.cso");
-        std::vector<u8> ps_code = Load_File("Data/Shaders/0.ps.cso");
 
-        D3D12_INPUT_ELEMENT_DESC input_elements[] =
-        {
-            { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-            { "COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 8, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        };
+static void
+Init_Pipelines(DEMO_ROOT &root)
+{
+    const D3D12_INPUT_ELEMENT_DESC input_elements[] =
+    {
+        { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        { "COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 8, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    };
+
+    const struct
+    {
+        const char *vs;
+        const char *ps;
+        const D3D12_INPUT_ELEMENT_DESC *in_elements;
+        u32 in_elements_count;
+        D3D12_PRIMITIVE_TOPOLOGY_TYPE topology_type;
+    } pipelines[NUM_GRAPHICS_PIPELINES] =
+    {
+        { "0.vs.cso", "0.ps.cso", input_elements, 2, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE },
+        { "1.vs.cso", "1.ps.cso", nullptr, 0, D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT },
+        { "2.vs.cso", "2.ps.cso", nullptr, 0, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE },
+    };
+
+    for (u32 pipeline_index = 0; pipeline_index < NUM_GRAPHICS_PIPELINES; ++pipeline_index)
+    {
+        u32 vs_size, ps_size;
+        u8 *vs_data, *ps_data;
+        char path[MAX_PATH];
+
+        snprintf(path, sizeof(path), "Data/Shaders/%s", pipelines[pipeline_index].vs);
+        Load_File(path, vs_size, vs_data);
+
+        snprintf(path, sizeof(path), "Data/Shaders/%s", pipelines[pipeline_index].ps);
+        Load_File(path, ps_size, ps_data);
 
         D3D12_GRAPHICS_PIPELINE_STATE_DESC pso_desc = {};
-        pso_desc.VS = { vs_code.data(), vs_code.size() };
-        pso_desc.PS = { ps_code.data(), ps_code.size() };
+        if (pipelines[pipeline_index].in_elements)
+        {
+            pso_desc.InputLayout = { pipelines[pipeline_index].in_elements, pipelines[pipeline_index].in_elements_count };
+        }
+        pso_desc.VS = { vs_data, vs_size };
+        pso_desc.PS = { ps_data, ps_size };
         pso_desc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
         pso_desc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
         pso_desc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
         pso_desc.SampleMask = 0xffffffff;
-        pso_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+        pso_desc.PrimitiveTopologyType = pipelines[pipeline_index].topology_type;
         pso_desc.NumRenderTargets = 1;
         pso_desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
         pso_desc.SampleDesc.Count = 1;
+
+        VHR(root.gfx.device->CreateGraphicsPipelineState(&pso_desc, IID_PPV_ARGS(&root.pipelines[pipeline_index])));
+        VHR(root.gfx.device->CreateRootSignature(0, vs_data, vs_size, IID_PPV_ARGS(&root.root_signatures[pipeline_index])));
+
+        free(vs_data);
+        free(ps_data);
     }
 }
-#endif
-static void Demo_Init(DEMO_ROOT &root)
+
+static void
+Demo_Init(DEMO_ROOT &root)
 {
     GRAPHICS_CONTEXT &gfx = root.gfx;
 
-    // VS_0, PS_0
-    {
-        std::vector<u8> vs_code = Load_File("Data/Shaders/0.vs.cso");
-        std::vector<u8> ps_code = Load_File("Data/Shaders/0.ps.cso");
-
-        D3D12_INPUT_ELEMENT_DESC input_elements[] =
-        {
-            { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-            { "COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 8, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        };
-
-        D3D12_GRAPHICS_PIPELINE_STATE_DESC pso_desc = {};
-        pso_desc.InputLayout = { input_elements, (u32)std::size(input_elements) };
-        pso_desc.VS = { vs_code.data(), vs_code.size() };
-        pso_desc.PS = { ps_code.data(), ps_code.size() };
-        pso_desc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
-        pso_desc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-        pso_desc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-        pso_desc.SampleMask = 0xffffffff;
-        pso_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-        pso_desc.NumRenderTargets = 1;
-        pso_desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-        pso_desc.SampleDesc.Count = 1;
-
-        VHR(gfx.device->CreateGraphicsPipelineState(&pso_desc, IID_PPV_ARGS(&root.pipelines[0])));
-        VHR(gfx.device->CreateRootSignature(0, vs_code.data(), vs_code.size(), IID_PPV_ARGS(&root.root_signatures[0])));
-    }
-    // VS_1, PS_1
-    {
-        std::vector<u8> vs_code = Load_File("Data/Shaders/1.vs.cso");
-        std::vector<u8> ps_code = Load_File("Data/Shaders/1.ps.cso");
-
-        D3D12_GRAPHICS_PIPELINE_STATE_DESC pso_desc = {};
-        pso_desc.VS = { vs_code.data(), vs_code.size() };
-        pso_desc.PS = { ps_code.data(), ps_code.size() };
-        pso_desc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
-        pso_desc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-        pso_desc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-        pso_desc.SampleMask = 0xffffffff;
-        pso_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-        pso_desc.NumRenderTargets = 1;
-        pso_desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-        pso_desc.SampleDesc.Count = 1;
-
-        VHR(gfx.device->CreateGraphicsPipelineState(&pso_desc, IID_PPV_ARGS(&root.pipelines[1])));
-        VHR(gfx.device->CreateRootSignature(0, vs_code.data(), vs_code.size(), IID_PPV_ARGS(&root.root_signatures[1])));
-    }
-    // VS_2, PS_2
-    {
-        std::vector<u8> vs_code = Load_File("Data/Shaders/2.vs.cso");
-        std::vector<u8> ps_code = Load_File("Data/Shaders/2.ps.cso");
-
-        D3D12_GRAPHICS_PIPELINE_STATE_DESC pso_desc = {};
-        pso_desc.VS = { vs_code.data(), vs_code.size() };
-        pso_desc.PS = { ps_code.data(), ps_code.size() };
-        pso_desc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
-        pso_desc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-        pso_desc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-        pso_desc.SampleMask = 0xffffffff;
-        pso_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-        pso_desc.NumRenderTargets = 1;
-        pso_desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-        pso_desc.SampleDesc.Count = 1;
-
-        VHR(gfx.device->CreateGraphicsPipelineState(&pso_desc, IID_PPV_ARGS(&root.pipelines[2])));
-        VHR(gfx.device->CreateRootSignature(0, vs_code.data(), vs_code.size(), IID_PPV_ARGS(&root.root_signatures[2])));
-    }
     // geometry buffer
     {
         const auto buffer_desc = CD3DX12_RESOURCE_DESC::Buffer(64 * 1024);
@@ -270,10 +238,12 @@ static void Demo_Init(DEMO_ROOT &root)
         *ptr++ = 0.8f; *ptr++ = -0.8f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 1.0f;
     }
 
+    Init_Pipelines(root);
     Init_Fragment_Resources(root.frags, gfx);
 }
 
-static i32 Demo_Run(DEMO_ROOT &root)
+static i32
+Demo_Run(DEMO_ROOT &root)
 {
     HWND window = Create_Window(DEMO_NAME, 1024, 1024);
 
@@ -303,7 +273,8 @@ static i32 Demo_Run(DEMO_ROOT &root)
     return 0;
 }
 
-i32 CALLBACK WinMain(HINSTANCE, HINSTANCE, LPSTR, i32)
+i32 CALLBACK
+WinMain(HINSTANCE, HINSTANCE, LPSTR, i32)
 {
     SetProcessDPIAware();
     DEMO_ROOT root = {};
