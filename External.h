@@ -2,16 +2,12 @@
 
 #define _CRT_SECURE_NO_WARNINGS
 #include <assert.h>
-#include <stdint.h>
-#include <math.h>
 #include <stdio.h>
-#include <stdlib.h>
 
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #include <dxgi1_4.h>
 #include <d3d12.h>
-#include <windows.h>
 
 #include <DirectXMath.h>
 #include "d3dx12.h"

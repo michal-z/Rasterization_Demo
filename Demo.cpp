@@ -3,7 +3,8 @@
 #include "Library.h"
 
 #define DEMO_NAME "Rasterization"
-#define NUM_GRAPHICS_PIPELINES 3
+#define NUM_GRAPHICS_PIPELINES 4
+#define NUM_TRIANGLES 2
 #define FRAGMENTS_RT_RESOLUTION 1024
 
 struct FRAGMENTS
@@ -40,8 +41,13 @@ Demo_Update(DEMO_ROOT &root)
     cmdlist->RSSetViewports(1, &D3D12_VIEWPORT{ 0.0f, 0.0f, (f32)FRAGMENTS_RT_RESOLUTION, (f32)FRAGMENTS_RT_RESOLUTION, 0.0f, 1.0f });
     cmdlist->RSSetScissorRects(1, &D3D12_RECT{ 0, 0, (LONG)FRAGMENTS_RT_RESOLUTION, (LONG)FRAGMENTS_RT_RESOLUTION });
 
-    cmdlist->OMSetRenderTargets(1, &frags.target_rtv, 0, nullptr);
+    ID3D12Resource *depth_buffer;
+    D3D12_CPU_DESCRIPTOR_HANDLE depth_buffer_dsv;
+    Get_Depth_Stencil_Buffer(gfx, depth_buffer, depth_buffer_dsv);
+
+    cmdlist->OMSetRenderTargets(1, &frags.target_rtv, TRUE, &depth_buffer_dsv);
     cmdlist->ClearRenderTargetView(frags.target_rtv, XMVECTORF32{ 0.0f, 0.0f, 0.0f, 0.0f }, 0, nullptr);
+    cmdlist->ClearDepthStencilView(depth_buffer_dsv, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
     if (frags.counter == 0)
     {
@@ -62,10 +68,10 @@ Demo_Update(DEMO_ROOT &root)
         D3D12_VERTEX_BUFFER_VIEW vb_view = {};
         vb_view.BufferLocation = root.geometry_buffer->GetGPUVirtualAddress();
         vb_view.StrideInBytes = sizeof(FRAGMENT);
-        vb_view.SizeInBytes = 3 * vb_view.StrideInBytes;
+        vb_view.SizeInBytes = NUM_TRIANGLES * 3 * vb_view.StrideInBytes;
         cmdlist->IASetVertexBuffers(0, 1, &vb_view);
 
-        cmdlist->DrawInstanced(3, 1, 0, 0);
+        cmdlist->DrawInstanced(NUM_TRIANGLES * 3, 1, 0, 0);
 
 
         cmdlist->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(frags.buffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
@@ -76,7 +82,7 @@ Demo_Update(DEMO_ROOT &root)
     cmdlist->SetGraphicsRootSignature(root.root_signatures[1]);
     cmdlist->SetGraphicsRootDescriptorTable(0, Copy_Descriptors_To_GPU(gfx, 1, frags.buffer_srv));
 
-    frags.counter += 32;
+    frags.counter += 64;
     cmdlist->DrawInstanced(frags.counter, 1, 0, 0);
     if (frags.counter >= FRAGMENTS_RT_RESOLUTION * FRAGMENTS_RT_RESOLUTION)
     {
@@ -90,14 +96,14 @@ Demo_Update(DEMO_ROOT &root)
     cmdlist->RSSetScissorRects(1, &D3D12_RECT{ 0, 0, (LONG)gfx.resolution[0], (LONG)gfx.resolution[1] });
 
     ID3D12Resource *back_buffer;
-    D3D12_CPU_DESCRIPTOR_HANDLE back_buffer_descriptor;
-    Get_Back_Buffer(gfx, back_buffer, back_buffer_descriptor);
+    D3D12_CPU_DESCRIPTOR_HANDLE back_buffer_rtv;
+    Get_Back_Buffer(gfx, back_buffer, back_buffer_rtv);
 
     cmdlist->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(back_buffer, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
 
-    cmdlist->OMSetRenderTargets(1, &back_buffer_descriptor, 0, nullptr);
-    cmdlist->ClearRenderTargetView(back_buffer_descriptor, XMVECTORF32{ 0.0f, 0.2f, 0.4f, 1.0f }, 0, nullptr);
+    cmdlist->OMSetRenderTargets(1, &back_buffer_rtv, 0, nullptr);
+    cmdlist->ClearRenderTargetView(back_buffer_rtv, XMVECTORF32{ 0.0f, 0.2f, 0.4f, 1.0f }, 0, nullptr);
 
 
     cmdlist->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -106,6 +112,19 @@ Demo_Update(DEMO_ROOT &root)
     cmdlist->SetGraphicsRootDescriptorTable(0, Copy_Descriptors_To_GPU(gfx, 1, frags.target_srv));
 
     cmdlist->DrawInstanced(3, 1, 0, 0);
+
+
+    cmdlist->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    cmdlist->SetPipelineState(root.pipelines[3]);
+    cmdlist->SetGraphicsRootSignature(root.root_signatures[3]);
+
+    D3D12_VERTEX_BUFFER_VIEW vb_view = {};
+    vb_view.BufferLocation = root.geometry_buffer->GetGPUVirtualAddress();
+    vb_view.StrideInBytes = sizeof(FRAGMENT);
+    vb_view.SizeInBytes = NUM_TRIANGLES * 3 * vb_view.StrideInBytes;
+    cmdlist->IASetVertexBuffers(0, 1, &vb_view);
+
+    cmdlist->DrawInstanced(NUM_TRIANGLES * 3, 1, 0, 0);
 
 
     cmdlist->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(back_buffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
@@ -119,7 +138,7 @@ Demo_Update(DEMO_ROOT &root)
 }
 
 static void
-Init_Fragment_Resources(FRAGMENTS &frags, GRAPHICS_CONTEXT &gfx)
+Init_Fragment_Resources(GRAPHICS_CONTEXT &gfx, FRAGMENTS &frags)
 {
     frags.counter = 0;
 
@@ -163,12 +182,12 @@ Init_Fragment_Resources(FRAGMENTS &frags, GRAPHICS_CONTEXT &gfx)
 }
 
 static void
-Init_Pipelines(DEMO_ROOT &root)
+Init_Pipelines(GRAPHICS_CONTEXT &gfx, ID3D12PipelineState **pipelines, ID3D12RootSignature **root_signatures)
 {
     const D3D12_INPUT_ELEMENT_DESC input_elements[] =
     {
-        { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        { "COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 8, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        { "COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
     };
 
     const struct
@@ -178,11 +197,14 @@ Init_Pipelines(DEMO_ROOT &root)
         const D3D12_INPUT_ELEMENT_DESC *in_elements;
         u32 in_elements_count;
         D3D12_PRIMITIVE_TOPOLOGY_TYPE topology_type;
-    } pipelines[NUM_GRAPHICS_PIPELINES] =
+        D3D12_FILL_MODE fill_mode;
+        bool depth_test;
+    } desc[NUM_GRAPHICS_PIPELINES] =
     {
-        { "0.vs.cso", "0.ps.cso", input_elements, 2, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE },
-        { "1.vs.cso", "1.ps.cso", nullptr, 0, D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT },
-        { "2.vs.cso", "2.ps.cso", nullptr, 0, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE },
+        { "0.vs.cso", "0.ps.cso", input_elements, 2, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, D3D12_FILL_MODE_SOLID, true },
+        { "1.vs.cso", "1.ps.cso", nullptr, 0, D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT, D3D12_FILL_MODE_SOLID, false },
+        { "2.vs.cso", "2.ps.cso", nullptr, 0, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, D3D12_FILL_MODE_SOLID, false },
+        { "3.vs.cso", "3.ps.cso", input_elements, 2, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, D3D12_FILL_MODE_WIREFRAME, false },
     };
 
     for (u32 pipeline_index = 0; pipeline_index < NUM_GRAPHICS_PIPELINES; ++pipeline_index)
@@ -191,30 +213,35 @@ Init_Pipelines(DEMO_ROOT &root)
         u8 *vs_data, *ps_data;
         char path[MAX_PATH];
 
-        snprintf(path, sizeof(path), "Data/Shaders/%s", pipelines[pipeline_index].vs);
+        snprintf(path, sizeof(path), "Data/Shaders/%s", desc[pipeline_index].vs);
         Load_File(path, vs_size, vs_data);
 
-        snprintf(path, sizeof(path), "Data/Shaders/%s", pipelines[pipeline_index].ps);
+        snprintf(path, sizeof(path), "Data/Shaders/%s", desc[pipeline_index].ps);
         Load_File(path, ps_size, ps_data);
 
         D3D12_GRAPHICS_PIPELINE_STATE_DESC pso_desc = {};
-        if (pipelines[pipeline_index].in_elements)
+        if (desc[pipeline_index].in_elements)
         {
-            pso_desc.InputLayout = { pipelines[pipeline_index].in_elements, pipelines[pipeline_index].in_elements_count };
+            pso_desc.InputLayout = { desc[pipeline_index].in_elements, desc[pipeline_index].in_elements_count };
         }
         pso_desc.VS = { vs_data, vs_size };
         pso_desc.PS = { ps_data, ps_size };
-        pso_desc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
+        pso_desc.RasterizerState.FillMode = desc[pipeline_index].fill_mode;
         pso_desc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
         pso_desc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+        if (desc[pipeline_index].depth_test)
+        {
+            pso_desc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+            pso_desc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+        }
         pso_desc.SampleMask = 0xffffffff;
-        pso_desc.PrimitiveTopologyType = pipelines[pipeline_index].topology_type;
+        pso_desc.PrimitiveTopologyType = desc[pipeline_index].topology_type;
         pso_desc.NumRenderTargets = 1;
         pso_desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
         pso_desc.SampleDesc.Count = 1;
 
-        VHR(root.gfx.device->CreateGraphicsPipelineState(&pso_desc, IID_PPV_ARGS(&root.pipelines[pipeline_index])));
-        VHR(root.gfx.device->CreateRootSignature(0, vs_data, vs_size, IID_PPV_ARGS(&root.root_signatures[pipeline_index])));
+        VHR(gfx.device->CreateGraphicsPipelineState(&pso_desc, IID_PPV_ARGS(&pipelines[pipeline_index])));
+        VHR(gfx.device->CreateRootSignature(0, vs_data, vs_size, IID_PPV_ARGS(&root_signatures[pipeline_index])));
 
         free(vs_data);
         free(ps_data);
@@ -233,13 +260,17 @@ Demo_Init(DEMO_ROOT &root)
 
         f32 *ptr;
         VHR(root.geometry_buffer->Map(0, &CD3DX12_RANGE(0, 0), (void **)&ptr));
-        *ptr++ = -0.8f; *ptr++ = -0.8f; *ptr++ = 1.0f; *ptr++ = 0.0f; *ptr++ = 0.0f;
-        *ptr++ = -0.8f; *ptr++ = 0.8f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
-        *ptr++ = 0.8f; *ptr++ = -0.8f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 1.0f;
+        *ptr++ = -0.8f; *ptr++ = -0.8f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f; *ptr++ = 0.0f;
+        *ptr++ = 0.0f; *ptr++ = 0.8f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
+        *ptr++ = 0.8f; *ptr++ = -0.8f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 1.0f;
+
+        *ptr++ = -0.9f; *ptr++ = 0.9f; *ptr++ = 0.2f; *ptr++ = 1.0f; *ptr++ = 0.0f; *ptr++ = 0.0f;
+        *ptr++ = 0.9f; *ptr++ = 0.9f; *ptr++ = 0.2f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
+        *ptr++ = 0.0f; *ptr++ = 0.25f; *ptr++ = 0.2f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 1.0f;
     }
 
-    Init_Pipelines(root);
-    Init_Fragment_Resources(root.frags, gfx);
+    Init_Pipelines(gfx, root.pipelines, root.root_signatures);
+    Init_Fragment_Resources(gfx, root.frags);
 }
 
 static i32

@@ -1,4 +1,4 @@
-//-------------------------------------------------------------------------------------------------
+//=================================================================================================
 #if PS_0 || VS_1
 
 #include "Common.h"
@@ -13,7 +13,7 @@
 struct VERTEX_OUTPUT
 {
     float4 position : SV_Position;
-    float2 normalized_coords : NCOORDS;
+    float3 normalized_coords : NCOORDS;
     float3 color : COLOR;
 };
 
@@ -23,7 +23,7 @@ struct VERTEX_OUTPUT
 
 struct VERTEX_INPUT
 {
-    float2 position : POSITION;
+    float3 position : POSITION;
     float3 color : COLOR;
 };
 
@@ -34,7 +34,7 @@ VS0_Main(VERTEX_INPUT input)
     VERTEX_OUTPUT output;
     output.normalized_coords = input.position;
     output.color = input.color;
-    output.position = float4(output.normalized_coords, 0.0f, 1.0f);
+    output.position = float4(input.position, 1.0f);
     return output;
 }
 
@@ -44,6 +44,7 @@ VS0_Main(VERTEX_INPUT input)
 
 RWStructuredBuffer<FRAGMENT> uav_fragments : register(u0);
 
+[earlydepthstencil]
 [RootSignature(RSI_0)]
 float4
 PS0_Main(VERTEX_OUTPUT input) : SV_Target0
@@ -79,7 +80,7 @@ VS1_Main(uint vertex_id : SV_VertexID)
 {
     FRAGMENT frag = srv_fragments[vertex_id];
     VERTEX_OUTPUT output;
-    output.position = float4(frag.position, 0.0f, 1.0f);
+    output.position = float4(frag.position.xy, 0.0f, 1.0f);
     output.color = frag.color;
     return output;
 }
@@ -109,7 +110,7 @@ struct VERTEX_OUTPUT
     float2 texcoord : TEXCOORD;
 };
 
-#endif
+#endif // #if VS_2 || PS_2
 //-------------------------------------------------------------------------------------------------
 #if VS_2
 
@@ -125,7 +126,7 @@ VS2_Main(uint vertex_id : SV_VertexID)
     return output;
 }
 
-#endif
+#endif // #if VS_2
 //-------------------------------------------------------------------------------------------------
 #if PS_2
 
@@ -139,5 +140,50 @@ PS2_Main(VERTEX_OUTPUT input) : SV_Target0
     return srv_t0.Sample(sam_s0, input.texcoord);
 }
 
-#endif
+#endif // #if PS_2
+//=================================================================================================
+#if VS_3 || PS_3
+
+#define RSI_3 "RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT)"
+
+struct VERTEX_OUTPUT
+{
+    float4 position : SV_Position;
+    float3 normalized_coords : NCOORDS;
+    float3 color : COLOR;
+};
+
+#endif // #if VS_3 || PS_3
 //-------------------------------------------------------------------------------------------------
+#if VS_3
+
+struct VERTEX_INPUT
+{
+    float3 position : POSITION;
+    float3 color : COLOR;
+};
+
+[RootSignature(RSI_3)]
+VERTEX_OUTPUT
+VS3_Main(VERTEX_INPUT input)
+{
+    VERTEX_OUTPUT output;
+    output.normalized_coords = input.position;
+    output.color = input.color;
+    output.position = float4(input.position, 1.0f);
+    return output;
+}
+
+#endif // #if VS_3
+//-------------------------------------------------------------------------------------------------
+#if PS_3
+
+[RootSignature(RSI_3)]
+float4
+PS3_Main(VERTEX_OUTPUT input) : SV_Target0
+{
+    return float4(input.color, 1.0);
+}
+
+#endif // #if PS_1
+//=================================================================================================

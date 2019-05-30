@@ -6,7 +6,7 @@ setlocal enabledelayedexpansion
 set NAME=Demo
 set HLSLC=dxc.exe /Ges /O3 /WX /nologo
 set SHADER_BEGIN=0
-set SHADER_END=2
+set SHADER_END=3
 set SRC=Demo.cpp Library.cpp
 
 for /L %%G in (%SHADER_BEGIN%,1,%SHADER_END%) do (

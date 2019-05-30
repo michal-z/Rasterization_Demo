@@ -2,6 +2,6 @@
 
 struct FRAGMENT
 {
-    float2 position;
+    float3 position;
     float3 color;
 };
