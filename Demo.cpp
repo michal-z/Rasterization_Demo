@@ -4,7 +4,7 @@
 
 #define DEMO_NAME "Rasterization"
 #define NUM_GRAPHICS_PIPELINES 4
-#define NUM_TRIANGLES 2
+#define NUM_TRIANGLES 6
 #define FRAGMENTS_RT_RESOLUTION 1024
 
 struct FRAGMENTS
@@ -260,13 +260,29 @@ Demo_Init(DEMO_ROOT &root)
 
         f32 *ptr;
         VHR(root.geometry_buffer->Map(0, &CD3DX12_RANGE(0, 0), (void **)&ptr));
-        *ptr++ = -0.8f; *ptr++ = -0.8f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f; *ptr++ = 0.0f;
-        *ptr++ = 0.0f; *ptr++ = 0.8f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
-        *ptr++ = 0.8f; *ptr++ = -0.8f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 1.0f;
+        *ptr++ = 0.0f; *ptr++ = 0.5f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f; *ptr++ = 0.0f;
+        *ptr++ = 0.25f; *ptr++ = 0.25f; *ptr++ = 0.5f; *ptr++ = 1.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
+        *ptr++ = -0.25f; *ptr++ = 0.25f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
 
-        *ptr++ = -0.9f; *ptr++ = 0.9f; *ptr++ = 0.2f; *ptr++ = 1.0f; *ptr++ = 0.0f; *ptr++ = 0.0f;
-        *ptr++ = 0.9f; *ptr++ = 0.9f; *ptr++ = 0.2f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
-        *ptr++ = 0.0f; *ptr++ = 0.25f; *ptr++ = 0.2f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 1.0f;
+        *ptr++ = 0.0f; *ptr++ = 0.2f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f; *ptr++ = 0.0f;
+        *ptr++ = 0.25f; *ptr++ = -0.05f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
+        *ptr++ = -0.25f; *ptr++ = -0.05f; *ptr++ = 0.5f; *ptr++ = 1.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
+
+        *ptr++ = 0.0f; *ptr++ = -0.1f; *ptr++ = 0.5f; *ptr++ = 1.0f; *ptr++ = 0.0f; *ptr++ = 0.0f;
+        *ptr++ = 0.25f; *ptr++ = -0.35f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
+        *ptr++ = -0.25f; *ptr++ = -0.35f; *ptr++ = 0.5f; *ptr++ = 1.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
+
+        *ptr++ = 0.0f; *ptr++ = -0.4f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f; *ptr++ = 0.0f;
+        *ptr++ = 0.25f; *ptr++ = -0.65f; *ptr++ = 0.5f; *ptr++ = 1.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
+        *ptr++ = -0.25f; *ptr++ = -0.65f; *ptr++ = 0.5f; *ptr++ = 1.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
+
+        *ptr++ = -0.8f; *ptr++ = -0.8f; *ptr++ = 0.2f; *ptr++ = 1.0f; *ptr++ = 0.0f; *ptr++ = 0.0f;
+        *ptr++ = 0.0f; *ptr++ = 0.8f; *ptr++ = 0.2f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
+        *ptr++ = 0.8f; *ptr++ = -0.8f; *ptr++ = 0.2f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 1.0f;
+
+        *ptr++ = -0.9f; *ptr++ = 0.9f; *ptr++ = 0.3f; *ptr++ = 1.0f; *ptr++ = 0.0f; *ptr++ = 0.0f;
+        *ptr++ = 0.9f; *ptr++ = 0.9f; *ptr++ = 0.3f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
+        *ptr++ = 0.0f; *ptr++ = 0.25f; *ptr++ = 0.3f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 1.0f;
     }
 
     Init_Pipelines(gfx, root.pipelines, root.root_signatures);
