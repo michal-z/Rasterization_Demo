@@ -243,8 +243,8 @@ Init_Pipelines(GRAPHICS_CONTEXT &gfx, ID3D12PipelineState **pipelines, ID3D12Roo
         VHR(gfx.device->CreateGraphicsPipelineState(&pso_desc, IID_PPV_ARGS(&pipelines[pipeline_index])));
         VHR(gfx.device->CreateRootSignature(0, vs_data, vs_size, IID_PPV_ARGS(&root_signatures[pipeline_index])));
 
-        free(vs_data);
-        free(ps_data);
+        Mem_Free(vs_data);
+        Mem_Free(ps_data);
     }
 }
 

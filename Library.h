@@ -42,6 +42,9 @@ void Load_File(const char *filename, u32 &size, u8 *&data);
 void Update_Frame_Stats(HWND window, const char *name, f64 &time, f32 &delta_time);
 f64 Get_Time();
 HWND Create_Window(const char *name, u32 width, u32 height);
+void *Mem_Alloc(usize size);
+void *Mem_Realloc(void *addr, usize size);
+void Mem_Free(void *addr);
 
 inline ID3D12GraphicsCommandList2 *
 Get_And_Reset_Command_List(GRAPHICS_CONTEXT &gfx)

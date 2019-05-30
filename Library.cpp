@@ -251,7 +251,7 @@ Load_File(const char *filename, u32 &size, u8 *&data)
         return;
     }
     size = (u32)ret_size;
-    data = (u8 *)malloc(size);
+    data = (u8 *)Mem_Alloc(size);
     fseek(file, 0, SEEK_SET);
     fread(data, 1, size, file);
     fclose(file);
@@ -344,4 +344,51 @@ Create_Window(const char *name, u32 width, u32 height)
     assert(window);
 
     return window;
+}
+
+void *
+Mem_Alloc(usize size)
+{
+    assert(size > 0);
+    void *mem = HeapAlloc(GetProcessHeap(), 0, size);
+    if (!mem)
+    {
+        OutputDebugString("Failed to allocate memory!");
+        assert(0);
+        exit(1);
+    }
+    return mem;
+}
+
+void *
+Mem_Realloc(void *addr, usize size)
+{
+    assert(size > 0);
+    if (addr == NULL)
+    {
+        return Mem_Alloc(size);
+    }
+    else
+    {
+        void *mem = HeapReAlloc(GetProcessHeap(), 0, addr, size);
+        if (!mem)
+        {
+            OutputDebugString("Failed to reallocate memory!");
+            assert(0);
+            exit(1);
+        }
+        return mem;
+    }
+}
+
+void
+Mem_Free(void *addr)
+{
+    assert(addr);
+    if (!HeapFree(GetProcessHeap(), 0, addr))
+    {
+        OutputDebugString("Failed to free memory!");
+        assert(0);
+        exit(1);
+    }
 }
