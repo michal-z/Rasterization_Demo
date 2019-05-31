@@ -18,8 +18,8 @@ for /L %%G in (%SHADER_BEGIN%,1,%SHADER_END%) do (
 
 set RELEASE=/Zi /O2 /DNDEBUG /MT
 set DEBUG=/Zi /Od /D_DEBUG /MTd
-if not defined CONFIG set CONFIG=%DEBUG%
-::if not defined CONFIG set CONFIG=%RELEASE%
+::if not defined CONFIG set CONFIG=%DEBUG%
+if not defined CONFIG set CONFIG=%RELEASE%
 set CFLAGS=%CONFIG% /W4 /EHa- /GR- /Gw /Gy /nologo /IExternal /wd4238 /wd4324 /wd4530
 
 if exist %NAME%.exe del %NAME%.exe

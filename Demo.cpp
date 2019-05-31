@@ -4,8 +4,8 @@
 
 #define DEMO_NAME "Rasterization"
 #define NUM_GRAPHICS_PIPELINES 4
-#define NUM_TRIANGLES 6
-#define FRAGMENTS_RT_RESOLUTION 1024
+#define NUM_TRIANGLES 1
+#define FRAGMENTS_RT_RESOLUTION 256
 
 struct FRAGMENTS
 {
@@ -60,7 +60,7 @@ Demo_Update(DEMO_ROOT &root)
         cmdlist->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(frags.buffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
 
 
-        cmdlist->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        cmdlist->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
         cmdlist->SetPipelineState(root.pipelines[0]);
         cmdlist->SetGraphicsRootSignature(root.root_signatures[0]);
         cmdlist->SetGraphicsRootDescriptorTable(0, Copy_Descriptors_To_GPU(gfx, 1, frags.buffer_uav));
@@ -68,10 +68,10 @@ Demo_Update(DEMO_ROOT &root)
         D3D12_VERTEX_BUFFER_VIEW vb_view = {};
         vb_view.BufferLocation = root.geometry_buffer->GetGPUVirtualAddress();
         vb_view.StrideInBytes = sizeof(FRAGMENT);
-        vb_view.SizeInBytes = NUM_TRIANGLES * 3 * vb_view.StrideInBytes;
+        vb_view.SizeInBytes = 4 * vb_view.StrideInBytes;
         cmdlist->IASetVertexBuffers(0, 1, &vb_view);
 
-        cmdlist->DrawInstanced(NUM_TRIANGLES * 3, 1, 0, 0);
+        cmdlist->DrawInstanced(4, 1, 0, 0);
 
 
         cmdlist->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(frags.buffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
@@ -82,7 +82,7 @@ Demo_Update(DEMO_ROOT &root)
     cmdlist->SetGraphicsRootSignature(root.root_signatures[1]);
     cmdlist->SetGraphicsRootDescriptorTable(0, Copy_Descriptors_To_GPU(gfx, 1, frags.buffer_srv));
 
-    frags.counter += 64;
+    frags.counter += 8;
     cmdlist->DrawInstanced(frags.counter, 1, 0, 0);
     if (frags.counter >= FRAGMENTS_RT_RESOLUTION * FRAGMENTS_RT_RESOLUTION)
     {
@@ -114,17 +114,17 @@ Demo_Update(DEMO_ROOT &root)
     cmdlist->DrawInstanced(3, 1, 0, 0);
 
 
-    cmdlist->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    cmdlist->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
     cmdlist->SetPipelineState(root.pipelines[3]);
     cmdlist->SetGraphicsRootSignature(root.root_signatures[3]);
 
     D3D12_VERTEX_BUFFER_VIEW vb_view = {};
     vb_view.BufferLocation = root.geometry_buffer->GetGPUVirtualAddress();
     vb_view.StrideInBytes = sizeof(FRAGMENT);
-    vb_view.SizeInBytes = NUM_TRIANGLES * 3 * vb_view.StrideInBytes;
+    vb_view.SizeInBytes = 4 * vb_view.StrideInBytes;
     cmdlist->IASetVertexBuffers(0, 1, &vb_view);
 
-    cmdlist->DrawInstanced(NUM_TRIANGLES * 3, 1, 0, 0);
+    cmdlist->DrawInstanced(4, 1, 0, 0);
 
 
     cmdlist->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(back_buffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
@@ -260,29 +260,34 @@ Demo_Init(DEMO_ROOT &root)
 
         f32 *ptr;
         VHR(root.geometry_buffer->Map(0, &CD3DX12_RANGE(0, 0), (void **)&ptr));
+        /*
         *ptr++ = 0.0f; *ptr++ = 0.5f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f; *ptr++ = 0.0f;
-        *ptr++ = 0.25f; *ptr++ = 0.25f; *ptr++ = 0.5f; *ptr++ = 1.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
-        *ptr++ = -0.25f; *ptr++ = 0.25f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
+        *ptr++ = 0.25f; *ptr++ = 0.25f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
+        *ptr++ = -0.25f; *ptr++ = 0.25f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 1.0f;
 
         *ptr++ = 0.0f; *ptr++ = 0.2f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f; *ptr++ = 0.0f;
-        *ptr++ = 0.25f; *ptr++ = -0.05f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
-        *ptr++ = -0.25f; *ptr++ = -0.05f; *ptr++ = 0.5f; *ptr++ = 1.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
+        *ptr++ = 0.2f; *ptr++ = -0.05f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
+        *ptr++ = -0.2f; *ptr++ = -0.05f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 1.0f;
 
-        *ptr++ = 0.0f; *ptr++ = -0.1f; *ptr++ = 0.5f; *ptr++ = 1.0f; *ptr++ = 0.0f; *ptr++ = 0.0f;
-        *ptr++ = 0.25f; *ptr++ = -0.35f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
-        *ptr++ = -0.25f; *ptr++ = -0.35f; *ptr++ = 0.5f; *ptr++ = 1.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
+        *ptr++ = 0.0f; *ptr++ = -0.1f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f; *ptr++ = 0.0f;
+        *ptr++ = 0.15f; *ptr++ = -0.35f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
+        *ptr++ = -0.15f; *ptr++ = -0.35f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 1.0f;
 
         *ptr++ = 0.0f; *ptr++ = -0.4f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f; *ptr++ = 0.0f;
-        *ptr++ = 0.25f; *ptr++ = -0.65f; *ptr++ = 0.5f; *ptr++ = 1.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
-        *ptr++ = -0.25f; *ptr++ = -0.65f; *ptr++ = 0.5f; *ptr++ = 1.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
+        *ptr++ = 0.15f; *ptr++ = -0.65f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
+        *ptr++ = -0.15f; *ptr++ = -0.65f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 1.0f;
+        */
 
-        *ptr++ = -0.8f; *ptr++ = -0.8f; *ptr++ = 0.2f; *ptr++ = 1.0f; *ptr++ = 0.0f; *ptr++ = 0.0f;
-        *ptr++ = 0.0f; *ptr++ = 0.8f; *ptr++ = 0.2f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
-        *ptr++ = 0.8f; *ptr++ = -0.8f; *ptr++ = 0.2f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 1.0f;
+        *ptr++ = -0.95f; *ptr++ = -0.95f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f; *ptr++ = 0.0f;
+        *ptr++ = -0.95f; *ptr++ = 0.95f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
+        *ptr++ = 0.95f; *ptr++ = -0.95f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 1.0f;
+        *ptr++ = 0.95f; *ptr++ = 0.95f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
 
-        *ptr++ = -0.9f; *ptr++ = 0.9f; *ptr++ = 0.3f; *ptr++ = 1.0f; *ptr++ = 0.0f; *ptr++ = 0.0f;
-        *ptr++ = 0.9f; *ptr++ = 0.9f; *ptr++ = 0.3f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
-        *ptr++ = 0.0f; *ptr++ = 0.25f; *ptr++ = 0.3f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 1.0f;
+        /*
+        *ptr++ = -0.9f; *ptr++ = 0.9f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f; *ptr++ = 0.0f;
+        *ptr++ = -0.8f; *ptr++ = 0.9f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
+        *ptr++ = -0.9f; *ptr++ = -0.9f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 1.0f;
+        */
     }
 
     Init_Pipelines(gfx, root.pipelines, root.root_signatures);
