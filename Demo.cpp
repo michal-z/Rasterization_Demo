@@ -5,7 +5,7 @@
 #define DEMO_NAME "Rasterization"
 #define NUM_GRAPHICS_PIPELINES 4
 #define NUM_TRIANGLES 1
-#define FRAGMENTS_RT_RESOLUTION 256
+#define FRAGMENTS_RT_RESOLUTION 128
 
 struct FRAGMENTS
 {
@@ -82,7 +82,7 @@ Demo_Update(DEMO_ROOT &root)
     cmdlist->SetGraphicsRootSignature(root.root_signatures[1]);
     cmdlist->SetGraphicsRootDescriptorTable(0, Copy_Descriptors_To_GPU(gfx, 1, frags.buffer_srv));
 
-    frags.counter += 8;
+    frags.counter += 4;
     cmdlist->DrawInstanced(frags.counter, 1, 0, 0);
     if (frags.counter >= FRAGMENTS_RT_RESOLUTION * FRAGMENTS_RT_RESOLUTION)
     {
