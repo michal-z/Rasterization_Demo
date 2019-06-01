@@ -278,10 +278,10 @@ Demo_Init(DEMO_ROOT &root)
         *ptr++ = -0.15f; *ptr++ = -0.65f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 1.0f;
         */
 
-        *ptr++ = -0.95f; *ptr++ = -0.95f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f; *ptr++ = 0.0f;
+        *ptr++ = -0.65f; *ptr++ = -0.95f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f; *ptr++ = 0.0f;
         *ptr++ = -0.95f; *ptr++ = 0.95f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
-        *ptr++ = 0.95f; *ptr++ = -0.95f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 1.0f;
-        *ptr++ = 0.95f; *ptr++ = 0.95f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
+        *ptr++ = 0.95f; *ptr++ = -0.75f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 0.0f; *ptr++ = 1.0f;
+        *ptr++ = 0.85f; *ptr++ = 0.85f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 1.0f; *ptr++ = 0.0f;
 
         /*
         *ptr++ = -0.9f; *ptr++ = 0.9f; *ptr++ = 0.0f; *ptr++ = 1.0f; *ptr++ = 0.0f; *ptr++ = 0.0f;

@@ -51,7 +51,23 @@ PS0_Main(VERTEX_OUTPUT input) : SV_Target0
 {
     uint index = uav_fragments.IncrementCounter();
     uav_fragments[index].position = input.normalized_coords;
-    uav_fragments[index].color = input.color;
+    float f = WaveGetLaneIndex() / (float)WaveGetLaneCount();
+
+    bool all_active = WaveActiveCountBits(WaveActiveBallot(true).x) == WaveGetLaneCount();
+    bool first = WaveIsFirstLane();
+
+    if (first)
+    {
+        uav_fragments[index].color = float3(1.0f, 1.0f, 0.5f + 0.5f * f);
+    }
+    else if (all_active)
+    {
+        uav_fragments[index].color = float3(0.0f, 0.5f + 0.5f * f, 0.0f);
+    }
+    else
+    {
+        uav_fragments[index].color = float3(0.5f + 0.5f * f, 0.0f, 0.0f);
+    }
     return float4(0.0f, 0.5f, 0.0f, 1.0f);
 }
 
