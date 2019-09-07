@@ -1,5 +1,8 @@
 Run make.bat from Visual Studio Developer Command Prompt to build.
 
+# AMD Fury:
+https://twitter.com/MichalZiulek/status/1134863966222594048
+
 # Intel HD 630:
 
 ![image](/intel.gif)
